@@ -6,6 +6,8 @@ An interactive, structured algorithm for evaluating methodological bias in obser
 
 **[View the Algorithm](https://ihtanboga.github.io/bias-assessment-algorithm/)**
 
+![Algorithm Preview](preview.png)
+
 ## Overview
 
 This algorithm follows a **design → bias threat → remedy** logic. Each step asks whether a key component of a hypothetical randomized trial has been clearly and validly reproduced in the observational setting.
