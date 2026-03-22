@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Methodological Audit Algorithm for Observational Studies</title>
+<style>
+:root {
+  --yes: #2d8a56;
+  --no: #b83c3c;
+  --bg: #ffffff;
+  --text: #2c2c2a;
+  --text2: #666;
+  --text3: #999;
+  --border: #e5e4e0;
+  --bias-bg: #fdf5f4;
+  --bias-border: #e5c4c0;
+  --bias-accent: #c04848;
+  --bias-title: #5a1a1a;
+  --bias-hint: #a06060;
+  --remedy-bg: #f0f7f2;
+  --remedy-border: #b8d8c4;
+  --remedy-accent: #2d8a56;
+  --remedy-title: #1a4a2a;
+  --remedy-hint: #5a8a6a;
+  --diamond-bg: #f7f6f2;
+  --diamond-stroke: #b5b4ae;
+  --critical-bg: #fdf8ee;
+  --critical-stroke: #8a5a20;
+  --oper-bg: #f2f5f8;
+  --oper-stroke: #7a8a9a;
+  --section-bg: #fafaf8;
+  --end-bg: #f0f7f2;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1a1a1a;
+    --text: #e0dfd8;
+    --text2: #aaa;
+    --text3: #777;
+    --border: #333;
+    --bias-bg: #2a1c1c;
+    --bias-border: #4a3030;
+    --bias-accent: #c04848;
+    --bias-title: #f0baba;
+    --bias-hint: #c08888;
+    --remedy-bg: #1c2a1c;
+    --remedy-border: #304a30;
+    --remedy-accent: #2d8a56;
+    --remedy-title: #b0e0c0;
+    --remedy-hint: #80b090;
+    --diamond-bg: #2a2a28;
+    --diamond-stroke: #555;
+    --critical-bg: #2e2818;
+    --critical-stroke: #aa8a40;
+    --oper-bg: #1e2228;
+    --oper-stroke: #6a7a8a;
+    --section-bg: #222;
+    --end-bg: #1a2e1a;
+  }
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 40px 20px 80px;
+}
+.header { text-align: center; margin-bottom: 36px; }
+.header h1 { font-size: 22px; font-weight: 600; letter-spacing: 0.2px; margin-bottom: 6px; }
+.header .sub { font-size: 13px; color: var(--text2); }
+.header .sub2 { font-size: 12px; color: var(--text3); font-style: italic; margin-top: 4px; }
+
+.legend {
+  display: flex; flex-wrap: wrap; gap: 16px; justify-content: center;
+  margin-bottom: 32px; font-size: 12px; color: var(--text3);
+}
+.legend-item { display: flex; align-items: center; gap: 5px; }
+.leg-line { width: 20px; height: 2px; border-radius: 1px; }
+.leg-yes { background: var(--yes); }
+.leg-no { background: var(--no); border-style: dashed; height: 0; border-top: 2px dashed var(--no); }
+.leg-box { width: 14px; height: 14px; border-radius: 3px; position: relative; }
+.leg-box::after { content: ''; position: absolute; left: 0; top: 0; width: 3px; height: 100%; border-radius: 2px; }
+.leg-bias { background: var(--bias-bg); border: 1px solid var(--bias-border); }
+.leg-bias::after { background: var(--bias-accent); }
+.leg-remedy { background: var(--remedy-bg); border: 1px solid var(--remedy-border); }
+.leg-remedy::after { background: var(--remedy-accent); }
+.leg-diamond { width: 14px; height: 14px; transform: rotate(45deg); border-radius: 2px; }
+.leg-crit { background: var(--critical-bg); border: 1px solid var(--critical-stroke); }
+
+.spine { position: relative; padding-left: 0; }
+
+.section-label {
+  font-size: 10px; font-weight: 600; color: var(--text3);
+  letter-spacing: 1.5px; text-transform: uppercase;
+  text-align: center; margin: 28px 0 6px; padding-top: 8px;
+}
+.section-label:first-child { margin-top: 0; }
+
+.node { margin-bottom: 0; position: relative; }
+
+.diamond {
+  max-width: 500px; margin: 0 auto 0;
+  padding: 14px 32px;
+  background: var(--diamond-bg);
+  border: 1px solid var(--diamond-stroke);
+  text-align: center;
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  min-height: 80px;
+  display: flex; align-items: center; justify-content: center; flex-direction: column;
+}
+.diamond.critical {
+  background: var(--critical-bg);
+  border-color: var(--critical-stroke);
+}
+.diamond.oper {
+  background: var(--oper-bg);
+  border-color: var(--oper-stroke);
+}
+.diamond .q { font-size: 13px; font-weight: 500; color: var(--text); line-height: 1.4; }
+.diamond .oper-tag {
+  font-size: 9px; font-weight: 600; color: var(--oper-stroke);
+  letter-spacing: 0.5px; margin-bottom: 2px;
+}
+
+.arrow-no {
+  text-align: center; padding: 6px 0 4px;
+  font-size: 11px; font-weight: 600; color: var(--no);
+}
+.arrow-no::before {
+  content: ''; display: block; width: 1px; height: 14px;
+  border-left: 2px dashed var(--no); margin: 0 auto 2px;
+}
+.arrow-no::after { content: ' ▼'; font-size: 8px; }
+
+.items {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 0 0 0;
+}
+.items-col-label {
+  font-size: 9px; font-weight: 600; letter-spacing: 1px;
+  text-align: center; padding-bottom: 4px;
+}
+.bias-label { color: var(--bias-hint); }
+.remedy-label { color: var(--remedy-hint); }
+
+.item {
+  padding: 8px 10px 8px 12px;
+  border-radius: 6px;
+  border-left: 3px solid;
+  position: relative;
+}
+.item-bias {
+  background: var(--bias-bg);
+  border-color: var(--bias-accent);
+  border-right: 1px solid var(--bias-border);
+  border-top: 1px solid var(--bias-border);
+  border-bottom: 1px solid var(--bias-border);
+}
+.item-remedy {
+  background: var(--remedy-bg);
+  border-color: var(--remedy-accent);
+  border-right: 1px solid var(--remedy-border);
+  border-top: 1px solid var(--remedy-border);
+  border-bottom: 1px solid var(--remedy-border);
+}
+.item-name { font-size: 12px; font-weight: 600; }
+.item-bias .item-name { color: var(--bias-title); }
+.item-remedy .item-name { color: var(--remedy-title); }
+.item-hint { font-size: 10.5px; margin-top: 1px; }
+.item-bias .item-hint { color: var(--bias-hint); }
+.item-remedy .item-hint { color: var(--remedy-hint); }
+
+.arrow-yes {
+  text-align: center; padding: 10px 0 10px;
+  font-size: 11px; font-weight: 600; color: var(--yes);
+}
+.arrow-yes::before {
+  content: ''; display: block; width: 2px; height: 22px;
+  background: var(--yes); margin: 0 auto 3px; border-radius: 1px;
+}
+.arrow-yes::after { content: ' ▼'; font-size: 8px; }
+
+.divider {
+  border: none; border-top: 1px dashed var(--border);
+  margin: 28px 60px 8px;
+}
+
+.end-box {
+  max-width: 520px; margin: 0 auto; padding: 16px 24px;
+  background: var(--end-bg); border: 1px solid var(--yes);
+  border-radius: 10px; text-align: center;
+}
+.end-box .end-title { font-size: 13px; font-weight: 600; color: var(--remedy-title); }
+.end-box .end-sub { font-size: 11px; color: var(--yes); margin-top: 3px; }
+.end-box .end-note { font-size: 10px; color: var(--remedy-hint); font-style: italic; margin-top: 6px; line-height: 1.5; }
+
+.footer {
+  text-align: center; margin-top: 40px;
+  font-size: 10px; color: var(--text3);
+}
+.footer a { color: var(--text3); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Methodological audit algorithm for observational studies</h1>
+  <div class="sub">Comparative-effectiveness — design → bias threat → remedy pathway</div>
+
+</div>
+
+<div class="legend">
+  <div class="legend-item"><div class="leg-line leg-yes"></div> Yes — proceed</div>
+  <div class="legend-item"><div class="leg-no" style="width:20px"></div> No — bias threat</div>
+  <div class="legend-item"><div class="leg-box leg-bias"></div> Bias threat</div>
+  <div class="legend-item"><div class="leg-box leg-remedy"></div> Remedy</div>
+  <div class="legend-item"><div class="leg-diamond leg-crit"></div> Critical checkpoint</div>
+</div>
+
+<div class="spine" id="spine"></div>
+
+<div class="footer"></div>
+
+<script>
+const data = [
+  {section:"A — INTERNAL VALIDITY"},
+  {q:"Is the causal question clearly defined\nwith explicit comparator and outcome?",
+   biases:[["Ill-defined contrast","Vague comparison blocks causal framing"]],
+   remedies:[["Specify the study protocol","Eligibility, strategies, assignment, outcome"]]},
+
+  {section:"ESTIMAND & CAUSAL CONTRAST"},
+  {q:"What causal contrast is targeted:\nITT-analogue or per-protocol?", critical:true,
+   biases:[["Estimand ambiguity","Unclear what is being estimated"]],
+   remedies:[["ITT → baseline strategy framing","Analyse as assigned, no adherence censoring"],
+             ["PP → handle nonadherence","IPCW / clone-censor-weight / g-methods"]]},
+
+  {section:"ELIGIBILITY & SOURCE POPULATION"},
+  {q:"Are eligibility criteria well-defined\nand applied identically across groups?",
+   biases:[["Selection bias","Sample ≠ target population"],["Berkson's bias","Hospital-only creates false associations"]],
+   remedies:[["Restriction / replication","Apply consistent inclusion criteria"],["Sensitivity to eligibility window","Vary criteria, check robustness"]]},
+
+  {q:"Are groups drawn from the\nsame source population?",
+   biases:[["Referral filter bias","Tertiary-center patients are sicker"],["Informed presence bias","EHR users ≠ general population"]],
+   remedies:[["Active comparator design","Compare within same care setting"],["Negative control outcomes","Detect residual confounding"]]},
+
+  {q:"Can eligibility and treatment strategy\nbe operationalized cleanly in available data?", oper:true,
+   biases:[["Misclassification bias","Imperfect coding / variable mapping"]],
+   remedies:[["Validation substudies","Chart review of operational definitions"],["Quantitative bias analysis","Formally model misclassification rates"]]},
+
+  {section:"TREATMENT STRATEGY & CLASSIFICATION"},
+  {q:"Are treatment strategies distinguishable\nat baseline using available data?",
+   biases:[["Exposure misclassification","Strategies overlap or are ambiguous"]],
+   remedies:[["Clone-censor-weight","Framework for complex treatment rules"],["Sequential trial emulation","If eligibility recurs over time"]]},
+
+  {q:"Do treatment strategies allow a\ngrace period for assignment?",
+   biases:[["Assignment ambiguity","Early data compatible with multiple strategies"]],
+   remedies:[["Pre-defined grace period","Explicit window with sensitivity analysis"],["Cloning approach","Clone at T₀, censor when strategies diverge"]]},
+
+  {section:"TIME-ZERO ALIGNMENT"},
+  {q:"Is treatment classified using only\ninformation available at assignment?", critical:true,
+   biases:[["Immortal time bias","Future info classifies past exposure"]],
+   remedies:[["Align classification to T₀","Use only baseline-available data"],["Landmark / grace-period","Pre-defined classification window"]]},
+
+  {q:"Are eligibility, treatment classification,\nand start of follow-up aligned?", critical:true,
+   biases:[["Starting time bias","Misaligned T₀ across groups"],["Immortal time bias","Event-free time misassigned"]],
+   remedies:[["Align to single time-zero","Assignment date = FU start = eligibility"],["Sensitivity: vary grace period","Test robustness to window choice"]]},
+
+  {section:"CONTEMPORANEITY"},
+  {q:"Were groups recruited in the\nsame calendar period and care setting?",
+   biases:[["Non-contemporaneous control","Historical controls drift over time"],["Chronological bias","Secular trends confound comparison"]],
+   remedies:[["Concurrent enrollment only","Restrict to overlapping calendar time"],["Calendar-time adjustment","Stratify or match by era"]]},
+
+  {section:"TREATMENT ASSIGNMENT & CONFOUNDING"},
+  {q:"Is treatment assignment independent of\nbaseline prognosis / indication?", critical:true,
+   biases:[["Confounding by indication","Indication itself is prognostic"]],
+   remedies:[["PS matching / weighting","Propensity score methods"],["Standardization / g-formula","Counterfactual prediction"],["IV methods if instrument valid","Exploit quasi-random variation"]]},
+
+  {section:"OUTCOME ASCERTAINMENT"},
+  {q:"Is outcome surveillance similar\nin intensity across groups?",
+   biases:[["Detection bias","Differential surveillance"],["Ascertainment bias","Incomplete outcome capture"],["Unmasking bias","Symptom triggers disease search"]],
+   remedies:[["Hard / objective endpoints","Prefer death, hospitalization over soft Dx"],["Blinded adjudication","Outcome committee if possible"],["Sensitivity: alternate definitions","Vary outcome criteria"]]},
+
+  {q:"Can outcome be operationalized cleanly\nin the available data source?", oper:true,
+   biases:[["Outcome misclassification","Imperfect ICD / procedure codes"]],
+   remedies:[["Validated outcome algorithms","PPV-checked code combinations"],["Quantitative bias analysis","Model outcome misclassification"]]},
+
+  {section:"FOLLOW-UP, CENSORING & ADHERENCE"},
+  {q:"Are competing events present and\nhandled consistently with the estimand?",
+   biases:[["Estimand distortion","Competing risks alter interpretation"]],
+   remedies:[["Cause-specific / subdistribution","Method consistent with estimand"],["Transparent reporting","Report competing event handling explicitly"]]},
+
+  {q:"Is loss to follow-up balanced\nand non-informative?",
+   biases:[["Attrition bias","Differential dropout"],["Informative censoring","Censoring related to outcome risk"]],
+   remedies:[["IPCW","Inverse probability of censoring weights"],["Joint IP weighting","Address censoring + confounding together"],["Sensitivity to censoring","Vary censoring assumptions"]]},
+
+  {q:"Is adherence handled appropriately\nfor the target estimand?",
+   biases:[["Adherence bias","Healthy-adherer effect"]],
+   remedies:[["ITT analogue (no censoring)","If intention-to-treat estimand"],["PP with IP weighting","If per-protocol estimand targeted"]]},
+
+  {section:"MISSING DATA"},
+  {q:"Are missing data substantial or\ndifferential across groups?",
+   biases:[["Missing data bias","Incomplete covariates / outcomes"],["Selection bias from CCA","Complete-case excludes non-randomly"]],
+   remedies:[["Multiple imputation","Under MAR assumption with diagnostics"],["Sensitivity to MNAR","Pattern-mixture / tipping-point analysis"]]},
+
+  {section:"ANALYSIS & ADJUSTMENT"},
+  {q:"Were key confounders identified\nand appropriately adjusted?",
+   biases:[["Residual confounding","Unmeasured / poorly measured"],["Collider bias","Inappropriate conditioning"]],
+   remedies:[["DAG-guided variable selection","Avoid conditioning on colliders"],["Doubly robust estimation","Combine PS + outcome model"],["E-value / bias analysis","Quantify unmeasured confounding"]]},
+
+  {q:"Is measured covariate balance adequate\nafter weighting / matching / adjustment?",
+   biases:[["Residual imbalance","Adjustment insufficient for key covariates"]],
+   remedies:[["Balance diagnostics","SMD tables before and after adjustment"],["Trimming / overlap checks","Restrict to region of PS overlap"]]},
+
+  {q:"If time-varying confounders present,\nare g-methods used?",
+   biases:[["Time-varying confounding","Prior treatment affects later covariates"]],
+   remedies:[["MSM with IP weighting","Marginal structural models"],["G-computation / g-formula","Parametric or nonparametric"],["Structural nested models","When effect modification key"]]},
+
+  {q:"Was the analysis plan pre-specified\nwith primary + sensitivity analyses?",
+   biases:[["Data-dredging bias","P-hacking / subgroup fishing"]],
+   remedies:[["Pre-registration","Protocol registration before analysis"],["Negative controls","Exposure and outcome controls"]]},
+
+  {section:"ROBUSTNESS & SENSITIVITY"},
+  {q:"Are findings robust to alternate\noperationalizations and assumptions?", critical:true,
+   biases:[["Fragile inference","Sensitive to analytic choices"]],
+   remedies:[["Vary operational definitions","Eligibility, exposure, outcome windows"],["Alternate adjustment sets","Different confounder selections"],["Quantitative bias analysis","Formal sensitivity parameters"]]},
+
+  {section:"divider"},
+
+  {section:"B — EVIDENCE DISSEMINATION & INTERPRETATION"},
+  {q:"Do conclusions match the actual\nfindings without overstatement?",
+   biases:[["Spin bias","Results framed more favorably than data"],["Rhetoric bias","Persuasion replaces evidence"]],
+   remedies:[["Structured reporting","TARGET / RECORD-PE / STROBE"]]},
+
+  {q:"Are all pre-specified outcomes\nreported regardless of direction?",
+   biases:[["Selective reporting","Suppressed unfavorable endpoints"],["Publication bias","Negative studies in file drawer"]],
+   remedies:[["Protocol transparency","Pre-registration + full reporting"]]},
+
+  {section:"end"}
+];
+
+const spine = document.getElementById('spine');
+
+data.forEach((item, idx) => {
+  if (item.section === 'divider') {
+    spine.appendChild(Object.assign(document.createElement('hr'), {className:'divider'}));
+    return;
+  }
+  if (item.section === 'end') {
+    const end = document.createElement('div');
+    end.innerHTML = `
+      <div class="arrow-yes">Yes</div>
+      <div class="end-box">
+        <div class="end-title">No major design-related bias identified in this audit</div>
+        <div class="end-sub">Causal interpretation more credible, conditional on assumptions</div>
+        <div class="end-note">Interpret estimates in light of precision, operationalization limits, identifying assumptions, and residual unmeasured confounding</div>
+      </div>`;
+    spine.appendChild(end);
+    return;
+  }
+  if (item.section && !item.q) {
+    const sl = document.createElement('div');
+    sl.className = 'section-label';
+    sl.textContent = item.section;
+    spine.appendChild(sl);
+    return;
+  }
+
+  const node = document.createElement('div');
+  node.className = 'node';
+
+  const cls = item.critical ? 'critical' : (item.oper ? 'oper' : '');
+  const qLines = item.q.split('\n').map(l => l.trim()).join('<br>');
+  const operTag = item.oper ? '<div class="oper-tag">OPERATIONALIZATION</div>' : '';
+
+  node.innerHTML = `
+    <div class="diamond ${cls}">
+      ${operTag}
+      <div class="q">${qLines}</div>
+    </div>
+    <div class="arrow-no">No</div>
+    <div class="items">
+      <div>
+        <div class="items-col-label bias-label">BIAS THREAT</div>
+        ${item.biases.map(b => `<div class="item item-bias"><div class="item-name">${b[0]}</div><div class="item-hint">${b[1]}</div></div>`).join('')}
+      </div>
+      <div>
+        <div class="items-col-label remedy-label">REMEDY</div>
+        ${item.remedies.map(r => `<div class="item item-remedy"><div class="item-name">${r[0]}</div><div class="item-hint">${r[1]}</div></div>`).join('')}
+      </div>
+    </div>
+    <div class="arrow-yes">Yes</div>
+  `;
+
+  spine.appendChild(node);
+});
+</script>
+</body>
+</html>
