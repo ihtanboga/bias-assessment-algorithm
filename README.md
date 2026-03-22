@@ -4,7 +4,7 @@ An interactive, structured algorithm for evaluating methodological bias in obser
 
 ## Live Demo
 
-**[View the Algorithm](https://halil21.github.io/bias-assessment-algorithm/)**
+**[View the Algorithm](https://ihtanboga.github.io/bias-assessment-algorithm/)**
 
 ## Overview
 
